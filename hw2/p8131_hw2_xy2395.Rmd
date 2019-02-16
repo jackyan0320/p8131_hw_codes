@@ -1,0 +1,206 @@
+---
+title: "p8131_hw2_xy2395"
+author: "Jack Yan"
+date: "2/12/2019"
+output: github_document
+---
+
+```{r setup, include=FALSE}
+knitr::opts_chunk$set(echo = TRUE)
+library(broom)
+library(tidyverse)
+```
+
+### Problem 1
+
+#### i) Fit the model using three link functions.
+
+```{r}
+# load the data
+  x = c(0, 1, 2, 3, 4)
+  y = c(2, 8, 15, 23, 27)
+  m = rep(30, 5)
+# fit the models using three link functions
+glm_logit = glm(cbind(y, m-y) ~ x, family = binomial(link = "logit"))
+glm_probit = glm(cbind(y, m-y) ~ x, family = binomial(link = "probit"))
+glm_cloglog = glm(cbind(y, m-y) ~ x, family = binomial(link = "cloglog"))
+```
+
+```{r, eval = F, echo = F}
+fit = glm_logit
+# find the estimate of beta
+estimate_alpha =  fit %>% broom::tidy() %>% filter(term == '(Intercept)') %>% pull(estimate)
+estimate_beta = fit %>% broom::tidy() %>% filter(term == 'x') %>% pull(estimate)
+# find the CI for beta
+std_error = fit %>% broom::tidy() %>% pull(std.error) %>% .[2]
+CIL = estimate_beta - std_error * qnorm(0.975)
+CIR = estimate_beta + std_error * qnorm(0.975)
+CI = c(CIL, CIR)
+# find the deviance
+#sum(residuals(fit)^2) # 0.3787483. calling residuals() will by default return deviance residuals
+
+deviance = deviance(fit) # 0.3787483
+
+p_hat_0.01 = boot::inv.logit(estimate_alpha + 0.01*estimate_beta) # 0.0901
+
+```
+
+Build a function that renders beta, CI for beta, deviance and p_hat(x=0.01).
+```{r}
+p1_table <- function(fit){
+  # find the estimate of beta
+  estimate_alpha =  fit %>% 
+    broom::tidy() %>% 
+    filter(term == '(Intercept)') %>% 
+    pull(estimate)
+  estimate_beta = fit %>% 
+    broom::tidy() %>% 
+    filter(term == 'x') %>% 
+    pull(estimate)
+  
+  # find the CI for beta
+  std_error = fit %>% 
+    broom::tidy() %>% 
+    pull(std.error) %>% .[2]
+  CIL = estimate_beta - std_error * qnorm(0.975)
+  CIR = estimate_beta + std_error * qnorm(0.975)
+  
+  # find the deviance
+  deviance = deviance(fit) 
+  
+  # find p_hat for x = 0.01
+  pi_hat = predict(fit, data.frame(x = 0.01), se.fit = TRUE, type = 'response') 
+  #p_hat_0.01 = boot::inv.logit(estimate_alpha + 0.01*estimate_beta) # This works for LOGIT link only.
+  
+  tibble(estimate_beta, CIL, CIR, deviance, p_hat = pi_hat[[1]])
+}
+
+bind_rows(
+  p1_table(glm_logit),
+  p1_table(glm_probit),
+  p1_table(glm_cloglog)
+  ) %>% 
+mutate(model = c('logit', 'probit', 'c-log-log')) %>% 
+select(model, everything()) %>% 
+knitr::kable(digits = 4)
+
+```
+
+#### ii) Estimate LD50 with 90% CI based on the THREE models.
+```{r}
+# First calculate the estimate for the logistic model
+
+ld50_ci = function(fit, alpha=0.1){
+  beta0 = fit$coefficients[1]
+  beta1 = fit$coefficients[2]
+  betacov = vcov(fit) 
+  x0fit = -beta0/beta1
+  varx0 = betacov[1,1]/(beta1^2) + betacov[2,2]*(beta0^2)/(beta1^4) - 2*betacov[1,2]*beta0/(beta1^3)
+  tibble(estiamte = exp(x0fit),
+      CIL = exp(x0fit + qnorm(alpha/2) * sqrt(varx0)),
+      CIR = exp(x0fit - qnorm(alpha/2) * sqrt(varx0))          
+     ) # 90% CI for LD50 by default
+}
+
+logit = 
+  ld50_ci(glm_logit) %>% mutate(model = 'logit') %>% 
+  select(model, everything()) 
+logit
+
+# For probit model, we can use the same function above.
+probit = 
+  ld50_ci(glm_probit) %>% mutate(model = 'probit') %>% 
+  select(model, everything())
+probit
+  
+
+```
+
+```{r}
+# for c-log-log model, the estimated x0 is not 0
+log(-log(0.5))
+
+
+alpha = 0.1
+fit = glm_cloglog
+# plug log(-log(0.5)) into the equation
+beta0 = fit$coefficients[1]
+beta1 = fit$coefficients[2]
+betacov = vcov(fit) 
+x0fit = (-beta0 + log(-log(0.5)) ) / beta1
+varx0 = betacov[1,1]/(beta1^2) + betacov[2,2]*((-log(-log(0.5))+beta0)^2)/(beta1^4) - 2*betacov[1,2]*(-log(-log(0.5))+beta0)/(beta1^3)
+# Calculte estimate and CI on the original scale 
+cloglog = 
+  tibble(estiamte = exp(x0fit),
+      CIL = exp(x0fit + qnorm(alpha/2) * sqrt(varx0)),
+      CIR = exp(x0fit - qnorm(alpha/2) * sqrt(varx0))          
+      ) %>% 
+  mutate(model = 'cloglog') %>% select(model, everything()) 
+cloglog
+
+# Summary: LD50 with 90% CI
+rbind(logit, probit, cloglog) %>% 
+  knitr::kable()
+```
+
+
+#### Problem 2
+
+Load the data.
+```{r}
+amount = seq(from = 10, to = 90, by = 5)
+offers = c(4,6,10,12,39,36,22,14,10,12,8,9,3,1,5,2,1)
+enrolls = c(0,2,4,2,12,14,10,7,5,5,3,5,2,0,4,2,1)
+length(amount)
+
+fit_glm = glm(cbind(enrolls, offers - enrolls)~amount, family = binomial(link = 'logit'))
+summary(fit_glm)
+deviance(fit_glm)
+#pval = 1 - pchisq(dev, 15);  pval
+```
+
+```{r}
+beta1 = fit_glm %>% broom::tidy() %>% filter(term == 'amount') %>% pull(estimate)
+beta0 = fit_glm %>% broom::tidy() %>% filter(term == '(Intercept)') %>% pull(estimate)
+
+std_error = fit_glm %>% broom::tidy() %>% filter(term == 'amount') %>% pull(std.error)
+std_error1 = fit_glm %>% vcov %>% .[2,2] %>% sqrt
+std_error == std_error1 # Two methods generate the same standard error, thus are equivalent.
+
+# 95% CI for beta_1
+beta1_result = 
+  tibble(term = 'beta1',
+         estimate = beta1, 
+         CIL = beta1 - std_error1 * qnorm(1-0.05/2),
+         CIR = beta1 + std_error1 * qnorm(1-0.05/2)
+        )
+
+# 95% CI for beta_0
+std_error0 = fit_glm %>% broom::tidy() %>% filter(term == '(Intercept)') %>% pull(std.error)
+beta0_result = 
+  tibble(term = 'beta0',
+         estimate = beta0, 
+         CIL = beta0 - std_error0 * qnorm(1-0.05/2),
+         CIR = beta0 + std_error0 * qnorm(1-0.05/2)
+        )
+
+rbind(beta0_result, beta1_result) %>% knitr::kable()
+```
+
+```{r}
+# estimate and CI for x0 (the predictor, amount of scholarship) when pi = 0.4
+pi = 0.4
+x0 = (log(pi/(1 - pi)) - beta0) / beta1
+beta0 = fit_glm %>% broom::tidy() %>% filter(term == '(Intercept)') %>% pull(estimate)
+beta1 = fit_glm %>% broom::tidy() %>% filter(term == 'amount') %>% pull(estimate)
+betacov = vcov(fit_glm)
+varx0 = betacov[1,1]/(beta1^2) + betacov[2,2]*((-log(4/6)+beta0)^2)/(beta1^4) - 2*betacov[1,2]*(-log(4/6)+beta0)/(beta1^3)
+alpha = 0.05
+result = tibble(estimate = x0,
+                CIL = x0 + qnorm(alpha/2) * sqrt(varx0), 
+                CIR = x0 - qnorm(alpha/2) * sqrt(varx0)
+         )
+
+result %>% knitr::kable()
+```
+
