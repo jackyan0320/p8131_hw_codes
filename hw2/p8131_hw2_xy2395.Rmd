@@ -155,8 +155,8 @@ length(amount)
 
 fit_glm = glm(cbind(enrolls, offers - enrolls)~amount, family = binomial(link = 'logit'))
 summary(fit_glm)
-deviance(fit_glm)
-#pval = 1 - pchisq(dev, 15);  pval
+dev = deviance(fit_glm)
+pval = 1 - pchisq(dev, 15);  pval # p_value >> 0.05, fit is good
 ```
 
 ```{r}
