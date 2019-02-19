@@ -9,6 +9,7 @@ output: github_document
 knitr::opts_chunk$set(echo = TRUE)
 library(broom)
 library(tidyverse)
+library(ResourceSelection)
 ```
 
 ### Problem 1
@@ -157,6 +158,9 @@ fit_glm = glm(cbind(enrolls, offers - enrolls)~amount, family = binomial(link = 
 summary(fit_glm)
 dev = deviance(fit_glm)
 pval = 1 - pchisq(dev, 15);  pval # p_value >> 0.05, fit is good
+
+
+hoslem.test(fit_glm$y, fitted(fit_glm), g = 10)
 ```
 
 ```{r}
@@ -196,9 +200,10 @@ beta1 = fit_glm %>% broom::tidy() %>% filter(term == 'amount') %>% pull(estimate
 betacov = vcov(fit_glm)
 varx0 = betacov[1,1]/(beta1^2) + betacov[2,2]*((-log(4/6)+beta0)^2)/(beta1^4) - 2*betacov[1,2]*(-log(4/6)+beta0)/(beta1^3)
 alpha = 0.05
-result = tibble(estimate = x0,
-                CIL = x0 + qnorm(alpha/2) * sqrt(varx0), 
-                CIR = x0 - qnorm(alpha/2) * sqrt(varx0)
+result = 
+  tibble(estimate = x0,
+         CIL = x0 + qnorm(alpha/2) * sqrt(varx0), 
+         CIR = x0 - qnorm(alpha/2) * sqrt(varx0)
          )
 
 result %>% knitr::kable()
