@@ -1,0 +1,156 @@
+---
+title: "p8131_hw3_xy2395"
+author: "Jack Yan"
+date: "2/19/2019"
+output: github_document
+---
+
+```{r setup, include=FALSE}
+knitr::opts_chunk$set(echo = TRUE)
+library(tidyverse)
+```
+
+#### Problem 1
+
+##### Data entry
+
+Manually import the data.
+
+```{r}
+case <- tibble(
+  age = c(25, 35, 45, 55, 65, 75),
+  non_exposed = c(0, 5, 21, 34, 36, 8),
+  exposed = c(1, 4, 25, 42, 19, 5)
+) %>% 
+  mutate(disease = 'diseased')
+
+control <- tibble(
+  age = c(25, 35, 45, 55, 65, 75),
+  non_exposed = c(106, 164, 138, 139, 88, 31),
+  exposed = c(9, 26, 29, 27, 18, 0)
+) %>% 
+  mutate(disease = 'non_diseased')
+```
+
+##### Data manipulation
+
+Make the data suitable for prospective modeling.
+
+```{r}
+data_p1 = 
+  rbind(case, control) %>%
+  gather(key = 'exposure_status', value = 'number', non_exposed:exposed) %>% 
+  mutate(exposure_status = recode(exposure_status, non_exposed = '0', exposed = '1')) %>% 
+  mutate(exposure_status = as.factor(exposure_status)) %>% 
+  spread(key = disease, value = number) %>% 
+  mutate(m = diseased + non_diseased) %>% 
+  select(diseased, m, exposure_status, age)
+
+data_p1
+```
+
+##### Model fitting
+
+```{r}
+fit = glm(cbind(diseased, m) ~ exposure_status + age, family = binomial(link = 'logit'), data_p1)
+summary(fit)
+fit %>% broom::tidy() %>% knitr::kable()
+
+# pval = 1 - pchisq(fit$deviance, 9); pval
+```
+
+##### Interpretation
+
+The intercept is not interpretable. The log odds ratio of esophageal cancer for low versus high daily alcohol consumption is 1.20, holding age constant. The log odds ratio of esophageal cancer for one-year increase in age is 0.05, holding exposure status constant. 
+
+##### Hypothesis test
+
+Model 0: (dieseased, m) ~ age
+
+Model 1: (diseased, m) ~ age + alcohol_exposure
+
+```{r}
+fit_0 = glm(cbind(diseased, m) ~ age, family = binomial(link = 'logit'), data_p1)
+
+G0 = sum(residuals(fit, type = 'pearson')^2) # pearson chisq 
+phi = G0 / 9
+
+test_statistic = (fit_0$deviance - fit$deviance) / phi
+test_statistic
+
+1 - pf(test_statistic, 1, 9)
+```
+
+The p-value for F test is less than 0.05. We reject the null and conclude that Model 1 with age and alcohol consumption as predictors is the superior model. 
+
+
+
+#### Problem 2
+
+##### Data entry
+
+```{r}
+  y_bean_75 = c(10, 23, 23, 26, 17)
+  m_bean_75 = c(39, 62, 81, 51, 39)
+  y_bean_73 = c(8, 10, 8, 23, 0)
+  m_bean_73 = c(16, 30, 28, 45, 4)
+
+  y_cucb_75 = c(5, 53, 55, 32, 46, 10)
+  m_cucb_75 = c(6, 74, 72, 51, 79, 13)
+  y_cucb_73 = c(3, 22, 15, 32, 3)
+  m_cucb_73 = c(12, 41, 30, 51, 7)
+  
+
+bean = tibble(
+    y = c(y_bean_75, y_bean_73),
+    m = c(m_bean_75, m_bean_73),
+    extract = 'bean',
+    seed = c(rep('75', length(y_bean_75)), rep('73', length(y_bean_73)))
+) 
+
+cucumber = tibble(
+    y = c(y_cucb_75, y_cucb_73),
+    m = c(m_cucb_75, m_cucb_73),
+    extract = 'cucumber',
+    seed = c(rep('75', length(y_cucb_75)), rep('73', length(y_cucb_73))) 
+    )
+
+data_p2 = rbind(bean, cucumber)
+```
+
+##### Model fitting
+
+```{r}
+fit_glm = glm(cbind(y, m) ~ seed + extract, family = binomial(link = 'logit'), data_p2)
+
+summary(fit_glm)
+```
+
+##### Interpretation
+
+The odds ratio of germination for O. aegyptiaca 75 versus O. aegyptiaca 73 is 0.1128, holding the type of root extract constant. The odds ratio of germination for cucumber root extract versus bean root extract is 0.5232, holding the type of seed constant. The intercept -1.0594 is the odds of germination for O. aegyptiaca 73 on bean root extract. 
+
+
+##### Overdispersion
+
+```{r}
+pval = 1 - pchisq(fit_glm$deviance, 21 - 2)
+pval # fit is good
+
+G.stat = sum(residuals(fit_glm, type = 'pearson')^2) # pearson chisq 
+G.stat
+phi = G.stat / 18
+phi
+
+tilde.phi = fit_glm$deviance / fit_glm$df.residual
+tilde.phi
+```
+
+```{r}
+res = residuals(fit_glm, type = 'pearson')
+plot(qnorm((21+1:21+0.5)/(2*21+1.125)),sort(abs(res)),xlab='Expected Half-Normal Order Stats',ylab='Ordered Abs Pearson Residuals')
+abline(a=0,b=1)
+abline(a=0, b=sqrt(phi), lty = 2)
+```
+
+There is no overdispersion.
