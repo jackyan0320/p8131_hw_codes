@@ -42,9 +42,8 @@ data_p1 =
   gather(key = 'exposure_status', value = 'number', non_exposed:exposed) %>% 
   mutate(exposure_status = recode(exposure_status, non_exposed = '0', exposed = '1')) %>% 
   mutate(exposure_status = as.factor(exposure_status)) %>% 
-  spread(key = disease, value = number) %>% 
-  mutate(m = diseased + non_diseased) %>% 
-  select(diseased, m, exposure_status, age)
+  spread(key = disease, value = number)  %>% 
+  select(diseased, non_diseased, exposure_status, age)
 
 data_p1
 ```
@@ -52,7 +51,7 @@ data_p1
 ##### Model fitting
 
 ```{r}
-fit = glm(cbind(diseased, m) ~ exposure_status + age, family = binomial(link = 'logit'), data_p1)
+fit = glm(cbind(diseased, non_diseased) ~ exposure_status + age, family = binomial(link = 'logit'), data_p1)
 summary(fit)
 fit %>% broom::tidy() %>% knitr::kable()
 
@@ -61,16 +60,16 @@ fit %>% broom::tidy() %>% knitr::kable()
 
 ##### Interpretation
 
-The intercept is not interpretable. The log odds ratio of esophageal cancer for low versus high daily alcohol consumption is 1.20, holding age constant. The log odds ratio of esophageal cancer for one-year increase in age is 0.05, holding exposure status constant. 
+The intercept is not interpretable. The log odds ratio of esophageal cancer for low versus high daily alcohol consumption is 1.78, holding age constant. The log odds ratio of esophageal cancer for one-year increase in age is 0.06, holding exposure status constant. 
 
 ##### Hypothesis test
 
-Model 0: (dieseased, m) ~ age
+Model 0: (dieseased, non_diseased) ~ age
 
-Model 1: (diseased, m) ~ age + alcohol_exposure
+Model 1: (diseased, non_diseased) ~ age + alcohol_exposure
 
 ```{r}
-fit_0 = glm(cbind(diseased, m) ~ age, family = binomial(link = 'logit'), data_p1)
+fit_0 = glm(cbind(diseased, non_diseased) ~ age, family = binomial(link = 'logit'), data_p1)
 
 G0 = sum(residuals(fit, type = 'pearson')^2) # pearson chisq 
 phi = G0 / 9
@@ -81,7 +80,7 @@ test_statistic
 1 - pf(test_statistic, 1, 9)
 ```
 
-The p-value for F test is less than 0.05. We reject the null and conclude that Model 1 with age and alcohol consumption as predictors is the superior model. 
+The p-value for F test is 0.00036 < 0.05. We reject the null and conclude that Model 1 with age and alcohol consumption as predictors is the superior model. 
 
 
 
@@ -115,43 +114,60 @@ cucumber = tibble(
     seed = c(rep('75', length(y_cucb_75)), rep('73', length(y_cucb_73))) 
     )
 
-data_p2 = rbind(bean, cucumber)
+data_p2 = 
+  rbind(bean, cucumber) %>% 
+  mutate(m_y = m - y) %>% 
+  select(y, m_y, seed, extract)
+  
+  
 ```
 
 ##### Model fitting
 
 ```{r}
-fit_glm = glm(cbind(y, m) ~ seed + extract, family = binomial(link = 'logit'), data_p2)
+fit_glm = glm(cbind(y, m_y) ~ seed + extract, family = binomial(link = 'logit'), data_p2)
 
 summary(fit_glm)
 ```
 
 ##### Interpretation
 
-The odds ratio of germination for O. aegyptiaca 75 versus O. aegyptiaca 73 is 0.1128, holding the type of root extract constant. The odds ratio of germination for cucumber root extract versus bean root extract is 0.5232, holding the type of seed constant. The intercept -1.0594 is the odds of germination for O. aegyptiaca 73 on bean root extract. 
+The odds ratio of germination for O. aegyptiaca 75 versus O. aegyptiaca 73 is 0.2705, holding the type of root extract constant. The odds ratio of germination for cucumber root extract versus bean root extract is 1.0647, holding the type of seed constant. The intercept -0.7005 is the odds of germination for O. aegyptiaca 73 on bean root extract. 
 
 
 ##### Overdispersion
 
 ```{r}
 pval = 1 - pchisq(fit_glm$deviance, 18)
-pval # fit is good
+pval 
+```
 
+A p-value smaller than 0.05 indicates that the fit is not good. Use graph to check if there exists over dispersion.
+
+```{r }
+res = residuals(fit_glm, type = 'pearson')
+plot(qnorm((21 + 1:21 + 0.5)/(2*21 + 1.125)), sort(abs(res)),xlab = 'Expected Half-Normal Order Stats', ylab = 'Ordered Abs Pearson Residuals')
+abline(a = 0, b = 1)
+abline(a = 0, b = sqrt(phi), lty = 2)
+```
+
+The plot shows a constant over-dispersion.
+
+```{r }
 G.stat = sum(residuals(fit_glm, type = 'pearson')^2) # pearson chisq 
 G.stat
 phi = G.stat / 18
-phi
-# summary(fit_glm, dispersion = phi)
-
-tilde.phi = fit_glm$deviance / fit_glm$df.residual
-tilde.phi
 ```
+
+The estimate of the dispersion parameter is `r phi`. Then we re-fit the model using the dispersion parameter. 
 
 ```{r}
-res = residuals(fit_glm, type = 'pearson')
-plot(qnorm((21 + 1:21 + 0.5)/(2*21 + 1.125)), sort(abs(res)),xlab='Expected Half-Normal Order Stats',ylab='Ordered Abs Pearson Residuals')
-abline(a=0,b=1)
-abline(a=0, b=sqrt(phi), lty = 2)
+summary(fit_glm, dispersion = phi)
 ```
 
-There is no overdispersion.
+Interpretation:
+
+The interpretation for the coefficients remains the same because the coefficients do not change. The standard errors are enlarged and therefore the p-values for the coefficients become larger. 
+
+The possible cause of the over dispersion is that the germination rate of seeds within each replicate/batch may be correlated. The germination rates are dependent because the seeds within a batch share the same environment, such as nutrition, air and light. Moreover, the heterogeneity of living conditions in different replicates may add to the variance in germination rate.
+
