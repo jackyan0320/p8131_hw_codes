@@ -134,13 +134,14 @@ The odds ratio of germination for O. aegyptiaca 75 versus O. aegyptiaca 73 is 0.
 ##### Overdispersion
 
 ```{r}
-pval = 1 - pchisq(fit_glm$deviance, 21 - 2)
+pval = 1 - pchisq(fit_glm$deviance, 18)
 pval # fit is good
 
 G.stat = sum(residuals(fit_glm, type = 'pearson')^2) # pearson chisq 
 G.stat
 phi = G.stat / 18
 phi
+# summary(fit_glm, dispersion = phi)
 
 tilde.phi = fit_glm$deviance / fit_glm$df.residual
 tilde.phi
@@ -148,7 +149,7 @@ tilde.phi
 
 ```{r}
 res = residuals(fit_glm, type = 'pearson')
-plot(qnorm((21+1:21+0.5)/(2*21+1.125)),sort(abs(res)),xlab='Expected Half-Normal Order Stats',ylab='Ordered Abs Pearson Residuals')
+plot(qnorm((21 + 1:21 + 0.5)/(2*21 + 1.125)), sort(abs(res)),xlab='Expected Half-Normal Order Stats',ylab='Ordered Abs Pearson Residuals')
 abline(a=0,b=1)
 abline(a=0, b=sqrt(phi), lty = 2)
 ```
