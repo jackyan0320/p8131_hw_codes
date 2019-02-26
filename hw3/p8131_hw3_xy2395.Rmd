@@ -2,7 +2,7 @@
 title: "p8131_hw3_xy2395"
 author: "Jack Yan"
 date: "2/19/2019"
-output: github_document
+output: pdf_document
 ---
 
 ```{r setup, include=FALSE}
@@ -132,7 +132,7 @@ summary(fit_glm)
 
 ##### Interpretation
 
-The odds ratio of germination for O. aegyptiaca 75 versus O. aegyptiaca 73 is 0.2705, holding the type of root extract constant. The odds ratio of germination for cucumber root extract versus bean root extract is 1.0647, holding the type of seed constant. The intercept -0.7005 is the odds of germination for O. aegyptiaca 73 on bean root extract. 
+The log odds ratio of germination for O. aegyptiaca 75 versus O. aegyptiaca 73 is 0.2705, holding the type of root extract constant. The log odds ratio of germination for cucumber root extract versus bean root extract is 1.0647, holding the type of seed constant. The intercept -0.7005 is the log odds of germination for O. aegyptiaca 73 on bean root extract. 
 
 
 ##### Overdispersion
