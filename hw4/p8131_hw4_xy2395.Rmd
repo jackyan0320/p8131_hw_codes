@@ -1,0 +1,76 @@
+---
+title: "P8131_hw4_xy2395"
+author: "Jack Yan"
+date: "2/28/2019"
+output: github_document
+---
+
+```{r setup, include=FALSE}
+knitr::opts_chunk$set(echo = TRUE)
+library(tidyverse)
+```
+
+
+## Data Entry
+```{r}
+data_wide = tibble(
+  resp_low = c(65, 34, 130, 141, 67, 130),
+  resp_medium = c(54, 47, 76, 116, 48, 105),
+  resp_high = c(100, 100, 111, 191, 62, 104),
+  contact = rep(c('low', 'high'), 3),
+  type = c('tower_block', 'tower_block', 'apartment', 'apartment', 'house', 'house')
+)
+
+data_long = 
+  data_wide %>% 
+  gather(key = 'satisfaction', value = 'count', resp_low:resp_high) %>% 
+  mutate(satisfaction = str_sub(satisfaction, 6)) %>% 
+  mutate(satisfaction = fct_relevel(satisfaction, 'low', 'medium', 'high')) %>% 
+  mutate(type = fct_relevel(type, 'tower_block','apartment', 'house'))
+```
+
+
+
+## i) Tables
+
+```{r}
+tbl1 = 
+  data_long %>% 
+  group_by(contact, satisfaction) %>% 
+  summarize(sum = sum(count)) %>% 
+  spread(contact, sum) %>% 
+  mutate(high = 100 * high / sum(high),
+         low = 100 * low / sum(low)) 
+
+tbl1 %>% knitr::kable(digits = 2,
+                      col.names = c('Satisfaction', 'High Contact (%)', 'Low Contact (%)'))
+```
+
+The table above shows association between satisfaction and contact with others. Residents with higher degree of contact with others tend to be more satisfied with their housing conditions. The degree of contact is positively associated with housing satisfaction.
+
+```{r}
+tbl2 = 
+  data_long %>% 
+  group_by(type, satisfaction) %>% 
+  summarize(sum = sum(count)) %>% 
+  spread(type, sum) %>% 
+  mutate(tower_block = tower_block / sum(tower_block),
+         apartment = apartment / sum(apartment),
+         house = house / sum(house)
+  )
+
+tbl2 %>% 
+  knitr::kable(digits = 2,
+               col.names = c('Satisfaction', 'Tower Block (%)', 'Apartment (%)', 'House (%)'))
+```
+
+The table above shows association between satisfaction and type of housing. Tower block Residents have the highest proportion of high satisfaction (50%) and the lowest proportion of low satisfaction (25%). Most residents living in apartments have high level of satisfaction, whereas most residents living in houses have low level of satisfaction.
+
+
+
+## ii) Multinomial Logistic Regression
+
+```{r}
+
+```
+
