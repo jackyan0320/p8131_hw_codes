@@ -8,6 +8,7 @@ output: github_document
 ```{r setup, include=FALSE}
 knitr::opts_chunk$set(echo = TRUE)
 library(tidyverse)
+library(nnet)
 ```
 
 
@@ -24,9 +25,17 @@ data_wide = tibble(
 data_long = 
   data_wide %>% 
   gather(key = 'satisfaction', value = 'count', resp_low:resp_high) %>% 
-  mutate(satisfaction = str_sub(satisfaction, 6)) %>% 
-  mutate(satisfaction = fct_relevel(satisfaction, 'low', 'medium', 'high')) %>% 
-  mutate(type = fct_relevel(type, 'tower_block','apartment', 'house'))
+  mutate(satisfaction = str_sub(satisfaction, 6),
+         satisfaction = fct_relevel(satisfaction, 'low', 'medium', 'high'),
+         type = fct_relevel(type, 'tower_block','apartment', 'house'),
+         contact = fct_relevel(contact, 'low', 'high')
+  )
+
+data_wide =  
+  data_long %>% 
+  spread(satisfaction, count) %>% 
+  select(low, medium, high, everything())
+  
 ```
 
 
@@ -43,7 +52,7 @@ tbl1 =
          low = 100 * low / sum(low)) 
 
 tbl1 %>% knitr::kable(digits = 2,
-                      col.names = c('Satisfaction', 'High Contact (%)', 'Low Contact (%)'))
+                      col.names = c('Satisfaction', 'Low Contact (%)', 'High Contact (%)'))
 ```
 
 The table above shows association between satisfaction and contact with others. Residents with higher degree of contact with others tend to be more satisfied with their housing conditions. The degree of contact is positively associated with housing satisfaction.
@@ -71,6 +80,69 @@ The table above shows association between satisfaction and type of housing. Towe
 ## ii) Multinomial Logistic Regression
 
 ```{r}
+fit_nomial = multinom(satisfaction ~ contact + type, weights = count, data = data_long)
+```
 
+#### Pattern in the associations
+```{r}
+# Coefficients
+summary(fit_nomial)$coefficients
+```
+
+The log odds ratio of medium vs low satisfaction between high and low level of contact is 0.296. The log odds ratio of high vs low satisfaction between high and low level of contact is 0.323. This suggests that residents with higher levels of contact have higher level of satisfaction.
+
+The log odds ratio of medium vs low satisfaction between apartment and tower block residents is -0.41. The log odds ratio of high vs low satisfaction between apartment and tower block residents is -0.64. This suggests that people living in tower blocks tends to have the highest level of satisfaction.
+
+
+#### Odds ratios with 95% con􏰍dence intervals
+```{r}
+# odds ratios with 95% confi􏰍dence intervals
+fit_nomial %>% 
+  broom::tidy() %>% 
+  mutate(CIL = estimate + std.error * qnorm(0.025),
+         CIR = estimate - std.error * qnorm(0.025)) %>% 
+  select(-std.error, -statistic, -p.value) %>% 
+  filter(term != '(Intercept)') %>% 
+  knitr::kable(digits = 2)
+```
+
+The odds ratios along with their 95% confidence intervals are shown in the table above.
+
+#### Goodness of fit
+```{r}
+# Goodness of fit
+pi_hat = predict(fit_nomial, data_wide, type = 'probs')
+# data_long
+res = data_wide[,1:3]
+m = rowSums(res)
+G_stat = sum((res - pi_hat * m)^2 / (pi_hat * m))
+p_value = 1 - pchisq(G_stat, df = (6-1)*(3-1))
+p_value
+```
+
+The p-value is `r p_value`, so the fit is good.
+
+#### Testing interaction of contact level by house type
+```{r}
+fit_nomial_interact = multinom(satisfaction ~ contact + type + contact*type, weights = count, data = data_long)
+summary(fit_nomial_interact)
+D.stat_small = sum(2 * res * log(res/(m*pi_hat)) )
+D.stat_small
+
+pi_hat2 = predict(fit_nomial_interact, data_wide, type = 'probs')
+D.stat_large = sum(2 * res * log(res/(m*pi_hat2)) )
+D.stat_large
+
+# Deviance analysis
+pval = 1 - pchisq(D.stat_small - D.stat_large, df = 4)
+pval
+```
+
+We used deviance analysis to test the interaction between level of contact and housing type. The p-value is larger than 0.05, so we fail to reject the null and conclude that the smaller model (without the interaction) is better. In other words, there is no interaction between contact level and house type.
+
+iii) Proportional odds model
+
+```{r}
+library(MASS)
 ```
 
