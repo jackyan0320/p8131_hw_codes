@@ -34,6 +34,10 @@ data_long =
 data_wide =  
   data_long %>% 
   spread(satisfaction, count) %>% 
+  mutate(
+    contact = as_factor(contact),
+    type = as_factor(type)
+  ) %>% 
   select(low, medium, high, everything())
   
 ```
@@ -94,7 +98,7 @@ The log odds ratio of medium vs low satisfaction between high and low level of c
 The log odds ratio of medium vs low satisfaction between apartment and tower block residents is -0.41. The log odds ratio of high vs low satisfaction between apartment and tower block residents is -0.64. This suggests that people living in tower blocks tends to have the highest level of satisfaction.
 
 
-#### Odds ratios with 95% con􏰍dence intervals
+#### Odds ratios with 95% confi􏰍dence intervals
 ```{r}
 # odds ratios with 95% confi􏰍dence intervals
 fit_nomial %>% 
@@ -140,9 +144,27 @@ pval
 
 We used deviance analysis to test the interaction between level of contact and housing type. The p-value is larger than 0.05, so we fail to reject the null and conclude that the smaller model (without the interaction) is better. In other words, there is no interaction between contact level and house type.
 
-iii) Proportional odds model
+## iii) Proportional odds model
 
 ```{r}
-library(MASS)
+fit_polr = MASS::polr(satisfaction ~ contact + type, data = data_long, weights = count)
+
+summary(fit_polr)
 ```
 
+The odds ratio between high and low levels of contact is 0.2524, so people with higher level of contact with others have greater satisfaction. 
+
+The odds ratio between the housing types apartment and tower block is -0.5009. The odds ration between house and tower block is -0.7362. This tells us that house residents have the lowest level of satisfaction and tower block residents have the highest level of satisfaction.
+
+## iv) Pearson residuals
+
+```{r}
+pihat_polr = predict(fit_polr, type = 'prob')
+
+resid_matrix = cbind(data_wide[,4:5], (res - pihat_polr*m)/sqrt(pihat_polr*m))
+resid_matrix
+
+max(abs(resid_matrix[,3:5]))
+```
+
+The largest Pearson residual is 7.068, corresponding to the response level 'low satisfaction' and covariate levels 'low contact' and 'apartment'.
