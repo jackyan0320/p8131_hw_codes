@@ -43,7 +43,6 @@ data_wide =
 ```
 
 
-
 ## i) Tables
 
 ```{r}
@@ -97,18 +96,17 @@ The log odds ratio of medium vs low satisfaction between high and low level of c
 
 The log odds ratio of medium vs low satisfaction between apartment and tower block residents is -0.41. The log odds ratio of high vs low satisfaction between apartment and tower block residents is -0.64. This suggests that people living in tower blocks tends to have the highest level of satisfaction.
 
-
-#### Odds ratios with 95% confi􏰍dence intervals
+#### Odds ratios with 95% confidence intervals
 ```{r}
-# odds ratios with 95% confi􏰍dence intervals
 fit_nomial %>% 
   broom::tidy() %>% 
-  mutate(CIL = estimate + std.error * qnorm(0.025),
-         CIR = estimate - std.error * qnorm(0.025)) %>% 
+  mutate(CIL = estimate * exp(std.error * qnorm(0.025)),
+         CIR = estimate / exp(std.error * qnorm(0.025))) %>% 
   select(-std.error, -statistic, -p.value) %>% 
   filter(term != '(Intercept)') %>% 
   knitr::kable(digits = 2)
 ```
+
 
 The odds ratios along with their 95% confidence intervals are shown in the table above.
 
