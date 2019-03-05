@@ -1,0 +1,30 @@
+---
+title: "P8131_hw5_xy2395"
+author: "Jack Yan"
+date: "3/5/2019"
+output: github_document
+---
+
+```{r setup, include=FALSE}
+knitr::opts_chunk$set(echo = TRUE)
+library(tidyverse)
+```
+
+## Problem 1
+
+```{r}
+crab_df = 
+  read.table("./hw5/HW5-crab.txt", header = TRUE) %>% 
+  as.tibble()
+```
+
+
+
+## Problem 2
+
+```{r}
+parasite_df = 
+  read.table("./hw5/HW5-parasite.txt", header = TRUE) %>% 
+  as.tibble()
+```
+
