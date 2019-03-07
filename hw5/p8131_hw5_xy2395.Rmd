@@ -1,0 +1,118 @@
+---
+title: "P8131_hw5_xy2395"
+author: "Jack Yan"
+date: "3/5/2019"
+output: github_document
+---
+
+```{r setup, include=FALSE}
+knitr::opts_chunk$set(echo = TRUE)
+library(tidyverse)
+```
+
+## Problem 1
+
+```{r echo = T, eval = F}
+crab_df = 
+  read.table("./hw5/HW5-crab.txt", header = TRUE) %>% 
+  as.tibble()
+```
+
+```{r echo = F, eval = T}
+crab_df = 
+  read.table("./HW5-crab.txt", header = TRUE) %>% 
+  as.tibble()
+```
+
+### (a)
+
+M1 : Sa ~ W
+
+```{r}
+fit1 = glm(Sa ~ W, family = poisson, data = crab_df)
+
+fit1 %>% 
+  broom::tidy() %>% 
+  mutate(exp_estimate = exp(estimate)) %>% 
+  select(-std.error, -statistic, -p.value) %>% 
+  knitr::kable()
+
+# Deviance and Pearson statistics are similar
+D = sum(residuals(fit1, type = 'deviance')^2); D
+G = sum(residuals(fit1, type = 'pearson')^2); G
+
+1 - pchisq(G, df = fit1$df.residual) # df = 171
+```
+
+The p-value is lower than 0.05, and the deviance from the full model is too large, so the fit is not good.
+
+**Interpretation**: The estimated coefficient of W (carapace width) is 0.164. exp(0.164) = 1.18. This means the number of satellites is estimated to increase by 1.18 folds with one-unit increase in carapace width.
+
+```{r eval = F, echo = F}
+D = sum(residuals(fit1, type = 'deviance')^2)
+D = fit1$null.deviance - fit1$deviance # This is not correct!!!
+G = sum(residuals(fit1, type = 'pearson')^2)
+G
+
+# alternative way to calculate pearson statistics
+resp = predict.glm(fit1, type = 'response')
+G = sum((crab_df$Sa - resp)^2 / resp )
+```
+
+
+### (b)
+
+M2: Sa ~ W + Wt
+
+```{r}
+fit2 = glm(Sa ~ W + Wt, family = poisson, data = crab_df)
+
+fit2 %>% 
+  broom::tidy() %>% 
+  mutate(exp_estimate = exp(estimate)) %>% 
+  select(term, estimate, exp_estimate, p.value) %>% 
+  knitr::kable()
+
+test.stat = fit1$deviance - fit2$deviance
+df = fit1$df.residual - fit2$df.residual
+1 - pchisq(test.stat, df = df) # df = 1
+```
+
+The p-value is smaller than 0.05, so we reject the null hypothesis and conclude that the larger model (M2) is superior to the smaller model (M1). 
+
+### (c)
+
+Check Over Dispersion.
+```{r, warning=F}
+resid = residuals(fit2, type = 'pearson')
+phi = sum(resid^2) / fit2$df.residual
+phi
+
+n = fit2$df.null + 1
+plot(qnorm((n + 1:n + 0.5)/(2*n + 1.125)), sort(abs(resid)),
+     xlab = 'Expected Half-Normal Order Stats',
+     ylab = 'Ordered Abs Pearson Residuals')
+abline(a = 0, b = 1)
+abline(a = 0, b = sqrt(phi), lty = 2)
+
+summary(fit2, dispersion = phi)$coef %>%
+  broom::tidy() %>% 
+  mutate(exp_estimate = exp(Estimate)) %>% 
+  select(.rownames, Estimate, exp_estimate) %>%
+  knitr::kable()
+```
+
+As shown in the plot, there is over-dispersion in Model 2. 
+
+**Interpretation**: The number of satellites is estimated to increase by 1.05 folds with one-unit increase in female crab's carapace width. The number of satellites is estimated to increase by 1.56 folds with one-unit increase in female crab's weight.
+
+
+
+## Problem 2
+
+```{r}
+parasite_df = 
+  read.table("./HW5-parasite.txt", header = TRUE) %>% 
+  as.tibble()
+```
+
