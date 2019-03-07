@@ -2,7 +2,7 @@
 title: "P8131_hw5_xy2395"
 author: "Jack Yan"
 date: "3/5/2019"
-output: pdf_document
+output: github_document
 ---
 
 ```{r setup, include=FALSE}
@@ -33,7 +33,7 @@ Model 1 : Sa ~ W
 fit1 = glm(Sa ~ W, family = poisson, data = crab_df)
 
 # Calculate Pearson statistic
-G = sum(residuals(fit1, type = 'deviance')^2); G
+G = sum(residuals(fit1, type = 'pearson')^2); G
 1 - pchisq(G, df = fit1$df.residual) # df = 171
 ```
 
