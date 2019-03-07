@@ -2,7 +2,7 @@
 title: "P8131_hw5_xy2395"
 author: "Jack Yan"
 date: "3/5/2019"
-output: github_document
+output: pdf_document
 ---
 
 ```{r setup, include=FALSE}
@@ -25,27 +25,27 @@ crab_df =
   as.tibble()
 ```
 
-### (a)
+### (1-a)
 
-M1 : Sa ~ W
+Model 1 : Sa ~ W
 
 ```{r}
 fit1 = glm(Sa ~ W, family = poisson, data = crab_df)
 
-fit1 %>% 
-  broom::tidy() %>% 
-  mutate(exp_estimate = exp(estimate)) %>% 
-  select(-std.error, -statistic, -p.value) %>% 
-  knitr::kable()
-
-# Deviance and Pearson statistics are similar
-D = sum(residuals(fit1, type = 'deviance')^2); D
-G = sum(residuals(fit1, type = 'pearson')^2); G
-
+# Calculate Pearson statistic
+G = sum(residuals(fit1, type = 'deviance')^2); G
 1 - pchisq(G, df = fit1$df.residual) # df = 171
 ```
 
-The p-value is lower than 0.05, and the deviance from the full model is too large, so the fit is not good.
+The p-value is lower than 0.05, indicating the deviance from the full model is too large, so the fit is not good.
+
+```{r}
+fit1 %>% 
+  broom::tidy() %>% 
+  mutate(exp_estimate = exp(estimate)) %>% 
+  select(term, estimate, exp_estimate, p.value) %>% 
+  knitr::kable()
+```
 
 **Interpretation**: The estimated coefficient of W (carapace width) is 0.164. exp(0.164) = 1.18. This means the number of satellites is estimated to increase 1.18 folds with one-unit increase in carapace width.
 
@@ -55,15 +55,19 @@ D = fit1$null.deviance - fit1$deviance # This is not correct!!!
 G = sum(residuals(fit1, type = 'pearson')^2)
 G
 
+# Deviance and Pearson statistics are similar
+D = sum(residuals(fit1, type = 'deviance')^2)
+G = sum(residuals(fit1, type = 'pearson')^2)
+
 # alternative way to calculate pearson statistics
 resp = predict.glm(fit1, type = 'response')
 G = sum((crab_df$Sa - resp)^2 / resp )
 ```
 
 
-### (b)
+### (1-b)
 
-M2: Sa ~ W + Wt
+Model 2: Sa ~ W + Wt
 
 ```{r}
 fit2 = glm(Sa ~ W + Wt, family = poisson, data = crab_df)
@@ -74,14 +78,15 @@ fit2 %>%
   select(term, estimate, exp_estimate, p.value) %>% 
   knitr::kable()
 
-test.stat = fit1$deviance - fit2$deviance
+# Deviance analysis
+test.stat = fit1$deviance - fit2$deviance; test.stat
 df = fit1$df.residual - fit2$df.residual
 1 - pchisq(test.stat, df = df) # df = 1
 ```
 
-The p-value is smaller than 0.05, so we reject the null hypothesis and conclude that the larger model (M2) is superior to the smaller model (M1). 
+Deviance analysis was conducted to compare the two models. The p-value is smaller than 0.05, so we reject the null hypothesis and conclude that the larger model (M2) is superior to the smaller model (M1). 
 
-### (c)
+### (1-c)
 
 Check Over Dispersion.
 ```{r, warning=F}
@@ -110,17 +115,6 @@ As shown in the plot, there is over-dispersion in Model 2.
 
 
 ## Problem 2
-
-```{r, eval = T, echo = F}
-parasite_df = 
-  read.table("./HW5-parasite.txt", header = TRUE) %>% 
-  as.tibble() %>% 
-  select(Sample, Intensity, Year, Length, Area) %>% 
-  janitor::clean_names() %>% 
-  mutate(year = as.factor(year),
-         area = as.factor(area))
-```
-
 ```{r, eval = F, echo = T}
 parasite_df = 
   read.table("./hw5/HW5-parasite.txt", header = TRUE) %>% 
@@ -134,7 +128,20 @@ levels(parasite_df$year)
 levels(parasite_df$area)
 ```
 
-### (a)
+```{r, eval = T, echo = F}
+parasite_df = 
+  read.table("./HW5-parasite.txt", header = TRUE) %>% 
+  as.tibble() %>% 
+  select(Sample, Intensity, Year, Length, Area) %>% 
+  janitor::clean_names() %>% 
+  mutate(year = as.factor(year),
+         area = as.factor(area))
+head(parasite_df)
+levels(parasite_df$year)
+levels(parasite_df$area)
+```
+
+### (2-a)
 ```{r}
 fit_fish1 = glm(intensity ~ area + year + length, family = poisson, data = parasite_df)
 fit_fish1 %>% 
@@ -153,9 +160,8 @@ Adjusting for other variables, the number of parasites in year 2000 is 1.955 tim
 The number of parasites changes 0.972 fold with one-unit increase in length of the fish, holding other variables constant. 
 
 
-### (b)
+### (2-b)
 ```{r}
-summary(fit_fish1)
 G = sum(residuals(fit_fish1, type = 'pearson')^2)
 1 - pchisq(G, df = fit_fish1$df.residual)
 ```
@@ -163,13 +169,13 @@ G = sum(residuals(fit_fish1, type = 'pearson')^2)
 The p-value is smaller than 0.05 and we conclude that the fit is not good.
 
 
-### (c)
+### (2-c)
 ```{r, warning=F}
 fit_zip = zeroinfl(intensity ~ area + year + length | area + year + length, data = parasite_df)
 ```
 
 ##### Zero-inflation model coefficients
-```{r }
+```{r warning=F}
 summary(fit_zip)$coefficients$zero %>% 
   broom::tidy() %>% 
   mutate(exp_estimate = exp(Estimate)) %>% 
@@ -177,7 +183,7 @@ summary(fit_zip)$coefficients$zero %>%
   knitr::kable(digits = 3)
 ```
 
-**Interpretation**
+Interpretation
 
 The areas 2 - 4 have different odds of parasite-susceptible fish than Area 1. Area 2 has 2.052 times the odds of susceptible fish than Area 1. Area 3 has 1.93 times the odds of susceptible fish than Area 1. Area 4 has 0.36 times the odds of susceptible fish than Area 1.
 
@@ -186,7 +192,7 @@ The odds of parasite-susceptible fish in 2000 and 2001 differ from that in 1999.
 The odds of parasite-susceptiblity changes 0.99 fold with one-unit increase in length of fish. (i.e. The longer the fish, the less susceptible to parasites.
 
 ##### Count model coefficients
-```{r}
+```{r warning = F}
 summary(fit_zip)$coefficients$count %>% 
   broom::tidy() %>% 
   mutate(exp_estimate = exp(Estimate)) %>% 
@@ -194,7 +200,7 @@ summary(fit_zip)$coefficients$count %>%
   knitr::kable(digits = 3)
 ```
 
-**Interpretation**
+Interpretation
 
 Adjusting for other variables, the number of parasites in Area 2 is estimated to be 1.308 times the number in Area 1. The number of parasites in Area 3 is estimated to be 1.158 times the number in Area 1. The number of parasites in Area 4 is estimated to be 2.572 times the number in Area 1.
 
