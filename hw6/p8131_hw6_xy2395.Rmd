@@ -1,0 +1,96 @@
+---
+title: "p8131_hw6_xy2395"
+author: "Jack Yan"
+date: "3/31/2019"
+output: pdf_document
+---
+
+```{r setup, include=FALSE}
+knitr::opts_chunk$set(echo = TRUE)
+library(tidyverse)
+library(nlme)
+# dental = read.table('./hw6/HW6-dental.txt')
+```
+
+## Problem 2
+### 2.1 Spaghetti Plot
+```{r}
+# Import data
+dental <- 
+  read.table('HW6-dental.txt', header = TRUE) %>%
+  as.tibble() %>% janitor::clean_names() %>% 
+  mutate(gender = as.factor(gender))
+```
+
+```{r}
+# Spaghetti plot
+dental %>% 
+ggplot(aes(x = age, y = distance, group = child, color = gender)) +
+  geom_line() +
+  theme_bw()
+```
+
+### 2.2 Marginal Form
+$$
+\begin{aligned}
+E\left(Y_{ij}\right) &= E(\beta_{0} + a_{i} + b_{0} \ast I_{(sex_{i}=0)} + b_{1} \ast I_{(sex_{i}=1)} + \beta_{1} \ast age_{ij} + e_{ij})\\
+&=\beta_{0} + \beta_{1} \ast age_{ij}\\
+Var\left(Y_{i}\right) &= Var\left( a_{i} + e_{ij} + b_k \right)\\
+&=Var\left( a_{i} \right) + Var\left(e_{ij}\right) +  Var\left(b_{k}\right)\\
+&=\sigma_{a}^{2} + \sigma_{e}^{2} + \sigma_{b}^{2}
+\end{aligned}
+$$
+
+
+### 2.3 Comparing models with different covariance patterns
+
+Assume equal variance across measurements.
+
+```{r}
+# Compound Symmetry covariance
+compsym = gls(distance ~ gender + age, 
+              data = dental, 
+              correlation = corCompSymm(form = ~1 | child), 
+              method="REML")
+# Exponential covariance
+expo = gls(distance ~ gender + age, 
+           data = dental, 
+           correlation = corExp(form = ~1 | child), 
+           method = 'REML')
+# Autoregressive covariance
+auto1 = gls(distance ~ gender + age, 
+            data = dental, 
+            correlation = corAR1(form = ~1 | child), 
+            method = 'REML')
+```
+
+```{r}
+# Compare coefficient parameter estimates
+bind_rows(
+  compsym$coefficients,
+  expo$coefficients,
+  auto1$coefficients,
+) %>% 
+  mutate(CovType = c('CompSym', 'Exp', 'Auto')) %>% 
+  select(CovType, everything()) %>% 
+  knitr::kable()
+```
+
+The coefficient parameter estimates are similar across the 3 covariance patterns.
+
+```{r}
+# Compare covariance estiamtes
+tibble(
+Covtype = c('CompSym', 'Exp', 'Auto'),
+variance = c(compsym$sigma, expo$sigma, auto1$sigma)^2
+) %>% 
+  knitr::kable()
+```
+
+The covariance estiamtes are similar across the 3 covariance patterns.
+
+
+
+
+
+
