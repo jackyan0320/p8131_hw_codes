@@ -44,7 +44,7 @@ $$
 
 ### 2.3 Comparing models with different covariance patterns
 
-Assume equal variance across measurements.
+For the following 3 models, we assume equal variance across measurements at different ages.
 
 ```{r}
 # Compound Symmetry covariance
@@ -80,11 +80,12 @@ The coefficient parameter estimates are similar across the 3 covariance patterns
 
 ```{r}
 # Compare covariance estiamtes
-tibble(
-Covtype = c('CompSym', 'Exp', 'Auto'),
-variance = c(compsym$sigma, expo$sigma, auto1$sigma)^2
-) %>% 
-  knitr::kable()
+# Compound Symmetry
+compsym$sigma^2 * corMatrix(compsym$modelStruct$corStruct)[[1]]
+# Exponential covariance
+expo$sigma^2 * corMatrix(expo$modelStruct$corStruct)[[1]]
+# Autoregressive covariance
+auto1$sigma^2 * corMatrix(auto1$modelStruct$corStruct)[[1]]
 ```
 
 The covariance estiamtes are similar across the 3 covariance patterns.
