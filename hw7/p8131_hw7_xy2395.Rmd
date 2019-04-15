@@ -1,89 +1,139 @@
 ---
-title: "p8131_hw6_xy2395"
+title: "p8131_hw7_xy2395"
 author: "Jack Yan"
-date: "3/31/2019"
-output: pdf_document
+date: "4/11/2019"
+output: html_document
 ---
 
 ```{r setup, include=FALSE}
 knitr::opts_chunk$set(echo = TRUE)
 library(tidyverse)
 library(nlme)
-# dental = read.table('./hw6/HW6-dental.txt')
+# polite_df = read_csv('./hw7/HW7-politeness_data.csv') %>% as.tibble() %>% janitor::clean_names()
 ```
 
-## Problem 2
-### 2.1 Spaghetti Plot
-```{r}
+```{r, message = FALSE}
 # Import data
-dental <- 
-  read.table('HW6-dental.txt', header = TRUE) %>%
-  as.tibble() %>% janitor::clean_names() %>% 
-  mutate(gender = as.factor(gender))
+polite_df <- 
+  read_csv('../hw7/HW7-politeness_data.csv') %>%
+  as.tibble() %>% janitor::clean_names() 
 ```
+
+#### 1. Exploratory Analysis
+
+Provide boxplots to show the relation between gender/attitude and pitch.
+```{r}
+# boxplots 
+polite_df %>%
+  ggplot(aes(x = gender, y = frequency, color = attitude)) +
+    geom_boxplot() +
+    theme_bw()
+```
+
+Males generally tend to have lower pitch than females. Within each gender, informal attitude (inf) tends to have higher pitch than formal attitude (pol).
+
+#### 2. Mixed Effects Model with Random Intercept
+
+Fit a mixed effects model with random intercepts for different subjects (gender and attitude being the fixed effects).
 
 ```{r}
-# Spaghetti plot
-dental %>% 
-ggplot(aes(x = age, y = distance, group = child, color = gender)) +
-  geom_line() +
-  theme_bw()
+lmm = lme(frequency ~ gender + attitude, random = ~1 | subject, method = "REML", data = polite_df)
+
+VarCorr(lmm)
+# var(Yi) = 598.1953 + 847.7049 = 1445.9
+var = as.numeric(VarCorr(lmm)[[1]]) + as.numeric(VarCorr(lmm)[[2]]); var 
+# cov(Yij,Yik) = 598.2
+cov = as.numeric(VarCorr(lmm)[[1]]); cov 
 ```
 
-### 2.2 Marginal Form
-
-Answer to this question is hand-written above.
-
-### 2.3 Comparing models with different covariance patterns
-
-For the following 3 models, we assume equal variance across measurements at different ages.
+The covariance matrix for a subject $Y_i$ follows a compound symmetry pattern with $var(Y_{ij})=1445.9$ and $cov(Y_{ij},Y_{ik})=598.2$. There are 14 measurements within each subject, so the covariance matrix is a 14*14 matrix with $var(Y_{ij})=1445.9$ as diagonal values and $cov(Y_{ij},Y_{ik})=598.2$ as off-diagonal values.
 
 ```{r}
-# Compound Symmetry covariance
-compsym = gls(distance ~ gender + age, 
-              data = dental, 
-              correlation = corCompSymm(form = ~1 | child), 
-              method="REML")
-# Exponential covariance
-expo = gls(distance ~ gender + age, 
-           data = dental, 
-           correlation = corExp(form = ~1 | child), 
-           method = 'REML')
-# Autoregressive covariance
-auto1 = gls(distance ~ gender + age, 
-            data = dental, 
-            correlation = corAR1(form = ~1 | child), 
-            method = 'REML')
+# covariance matrix for the REML estimates of fixed effects
+vcov(lmm)
 ```
+
+The covariance matrix for the REML estimates of fixed effects is shown above.
 
 ```{r}
-# Compare coefficient parameter estimates
-bind_rows(
-  compsym$coefficients,
-  expo$coefficients,
-  auto1$coefficients,
-) %>% 
-  mutate(CovType = c('CompSym', 'Exp', 'Auto')) %>% 
-  select(CovType, everything()) %>% 
-  knitr::kable()
+# BLUPs for subject-speci􏰍c intercepts
+random.effects(lmm)
 ```
 
-The coefficient parameter estimates are similar across the 3 covariance patterns.
+The BLUPs for subject-specific intercepts are shown above. 
 
 ```{r}
-# Compare covariance estiamtes
-# Compound Symmetry
-compsym$sigma^2 * corMatrix(compsym$modelStruct$corStruct)[[1]]
-# Exponential covariance
-expo$sigma^2 * corMatrix(expo$modelStruct$corStruct)[[1]]
-# Autoregressive covariance
-auto1$sigma^2 * corMatrix(auto1$modelStruct$corStruct)[[1]]
+resid_lmm = polite_df$frequency-fitted(lmm)[[1]]
+resid_lmm
 ```
 
-The covariance estiamtes are similar across the 3 covariance patterns.
+Residuals are the deviations from subject-specific mean. The residuals are shown above.
+
+#### 3. Likelihood Ratio Test for the Interaction Term
+
+Fit a mixed effects model with intercepts for different subjects (gender, attitude and their interaction being the fixed effects).
+
+```{r}
+lmm_small = lme(frequency ~ gender + attitude, random = ~1 | subject, method = "ML", data = polite_df)
+lmm_large = lme(frequency ~ gender * attitude, random = ~1 | subject, method = "ML", data = polite_df)
+
+anova(lmm_small, lmm_large)
+```
+
+We use maximum likelihood method to fit the model. The p-value for Likelihood ratio test is 0.2392 > 0.05, so we fail to reject the null and conclude that the interaction term is not significantly associated with pitch, at the significance level of 0.05.
 
 
+#### 4. Mixed Effects Model with Random Intercept and Slope
 
+Model: $Y_{ij}=\beta_1 + \beta_2*gender+\beta_3*I(attitude=pol)+b_{1i}+b_{2i}*I(attitude=pol)+ \epsilon_{ij}$,
+
+where $\beta_1$ and $\beta_2$ are fixed intercept and slope, respectively, and $b_{1i}$ and $b_{2i}$ are random intercept and slope, respectively.
+
+```{r}
+lmm2 = lme(frequency ~ gender + attitude, random = ~1 + attitude | subject, method = "REML", data = polite_df)
+
+VarCorr(lmm2)
+getVarCov(lmm2)
+
+```
+We get $g_{11}=598.2$, $g_{22}=1.079496*10^{-5}$, $g_{12}=0$, and $\sigma^2=847.7$. 
+
+Variance:
+$var(Y_{ij})=g_{11} + 2t_{ij}g_{12} + t_{ij}^2 g_{22} + \sigma^2$
+
+1. If $t_{ij}= 1$, $var(Y_{ij})=g_{11} + 2t_{ij}g_{12} + t_{ij}^2 g_{22} + \sigma^2=598.2+2*0+1.079496*10^{-5}+847.7=1445.9$
+
+2. If $t_{ij}= 0$, $var(Y_{ij})=g_{11} + \sigma^2=598.2+847.7=1445.9$
+
+The general formula of covariance between $Y_{ij}$ and $Y_{ik}$ is
+
+$cov(Y_{ij},Y_{ik})=g_{11}+ (t_{ij} + t_{ik})g_{12} +t_{ij}t_{ik}g_{22}$.
+
+1. If $t_{ij}= 0$ and $t_{ik}=0$, $cov(Y_{ij},Y_{ik})=g_{11}= 598.2$.
+
+2. If $t_{ij}= 0$ and $t_{ik}=1$, $cov(Y_{ij},Y_{ik})=g_{11}+g_{12}=598.2+0=598.2$.
+
+3. If $t_{ij}= 1$ and $t_{ik}=0$, $cov(Y_{ij},Y_{ik})=g_{11}+g_{12}=598.2+1.079496*10^{-5}=598.2$.
+
+4. If $t_{ij}= 1$ and $t_{ik}=1$, $cov(Y_{ij},Y_{ik})=g_{11}+ 2g_{12}+g_{22}=598.2+2*0+1.079496*10^{-5}=598.2$.
+
+Since $g_{22}$ is small and $t_{ij}$ can be either 0 or 1, we ignore the terms $t_{ij}^2 g_{22}$ and $t_{ij}t_{ik}g_{22}$.
+
+So we get $var(Y_{ij})= 1445.9$ and $cov(Y_{ij},Y_{ik})=598.2$ for any different j and k.
+
+The random slope has small variance, thus captures little variation in the data. So this model does not do much better job than a random intercept model. The covariance structure for this model is thus numerically a compound symmetry structure as in Question 2.
+
+```{r}
+fixed.effects(lmm2)
+fixed_effect = 256.98691 + -20.00238; fixed_effect
+
+random.effects(lmm2)
+random_effect = -13.575831 + -8.408891 * 10^(-07); random_effect
+
+BLUP = fixed_effect + random_effect; BLUP
+```
+
+#### 5. 
 
 
 

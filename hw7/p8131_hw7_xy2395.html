@@ -222,9 +222,26 @@ VarCorr(lmm2)</code></pre>
 ## (Intercept) 5.981953e+02 24.458032213 (Intr)
 ## attitudepol 1.079496e-05  0.003285569 0     
 ## Residual    8.477049e+02 29.115372269</code></pre>
+<pre class="r"><code>getVarCov(lmm2)</code></pre>
+<pre><code>## Random effects variance covariance matrix
+##             (Intercept) attitudepol
+## (Intercept)  5.9820e+02  1.3002e-05
+## attitudepol  1.3002e-05  1.0795e-05
+##   Standard Deviations: 24.458 0.0032856</code></pre>
 <p>We get <span class="math inline">\(g_{11}=598.2\)</span>, <span class="math inline">\(g_{22}=1.079496*10^{-5}\)</span>, <span class="math inline">\(g_{12}=0\)</span>, and <span class="math inline">\(\sigma^2=847.7\)</span>.</p>
-<p><span class="math inline">\(var(Y_{ij})=g_{11} + 2t_{ij}g_{12} + t_{ij}^2 g_{22} + \sigma^2\)</span></p>
-<p><span class="math inline">\(cov(Y_{ij},Y_{ik})=g_{11}+ (t_{ij} + t_{ik})g_{12} +t_{ij}t_{ik}g_{22}\)</span></p>
+<p>Variance: <span class="math inline">\(var(Y_{ij})=g_{11} + 2t_{ij}g_{12} + t_{ij}^2 g_{22} + \sigma^2\)</span></p>
+<ol style="list-style-type: decimal">
+<li><p>If <span class="math inline">\(t_{ij}= 1\)</span>, <span class="math inline">\(var(Y_{ij})=g_{11} + 2t_{ij}g_{12} + t_{ij}^2 g_{22} + \sigma^2=598.2+2*0+1.079496*10^{-5}+847.7=1445.9\)</span></p></li>
+<li><p>If <span class="math inline">\(t_{ij}= 0\)</span>, <span class="math inline">\(var(Y_{ij})=g_{11} + \sigma^2=598.2+847.7=1445.9\)</span></p></li>
+</ol>
+<p>The general formula of covariance between <span class="math inline">\(Y_{ij}\)</span> and <span class="math inline">\(Y_{ik}\)</span> is</p>
+<p><span class="math inline">\(cov(Y_{ij},Y_{ik})=g_{11}+ (t_{ij} + t_{ik})g_{12} +t_{ij}t_{ik}g_{22}\)</span>.</p>
+<ol style="list-style-type: decimal">
+<li><p>If <span class="math inline">\(t_{ij}= 0\)</span> and <span class="math inline">\(t_{ik}=0\)</span>, <span class="math inline">\(cov(Y_{ij},Y_{ik})=g_{11}= 598.2\)</span>.</p></li>
+<li><p>If <span class="math inline">\(t_{ij}= 0\)</span> and <span class="math inline">\(t_{ik}=1\)</span>, <span class="math inline">\(cov(Y_{ij},Y_{ik})=g_{11}+g_{12}=598.2+0=598.2\)</span>.</p></li>
+<li><p>If <span class="math inline">\(t_{ij}= 1\)</span> and <span class="math inline">\(t_{ik}=0\)</span>, <span class="math inline">\(cov(Y_{ij},Y_{ik})=g_{11}+g_{12}=598.2+1.079496*10^{-5}=598.2\)</span>.</p></li>
+<li><p>If <span class="math inline">\(t_{ij}= 1\)</span> and <span class="math inline">\(t_{ik}=1\)</span>, <span class="math inline">\(cov(Y_{ij},Y_{ik})=g_{11}+ 2g_{12}+g_{22}=598.2+2*0+1.079496*10^{-5}=598.2\)</span>.</p></li>
+</ol>
 <p>Since <span class="math inline">\(g_{22}\)</span> is small and <span class="math inline">\(t_{ij}\)</span> can be either 0 or 1, we ignore the terms <span class="math inline">\(t_{ij}^2 g_{22}\)</span> and <span class="math inline">\(t_{ij}t_{ik}g_{22}\)</span>.</p>
 <p>So we get <span class="math inline">\(var(Y_{ij})= 1445.9\)</span> and <span class="math inline">\(cov(Y_{ij},Y_{ik})=598.2\)</span> for any different j and k.</p>
 <p>The random slope has small variance, thus captures little variation in the data. So we could reduce this model to a random intercept model. The covariance structure for this model is thus approxiamtely a compound symmetry structure as in Question 2.</p>
