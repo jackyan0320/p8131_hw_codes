@@ -2,7 +2,7 @@
 title: "p8131_hw7_xy2395"
 author: "Jack Yan"
 date: "4/11/2019"
-output: html_document
+output: github_document
 ---
 
 ```{r setup, include=FALSE}
@@ -48,6 +48,13 @@ cov = as.numeric(VarCorr(lmm)[[1]]); cov
 
 The covariance matrix for a subject $Y_i$ follows a compound symmetry pattern with $var(Y_{ij})=1445.9$ and $cov(Y_{ij},Y_{ik})=598.2$. There are 14 measurements within each subject, so the covariance matrix is a 14*14 matrix with $var(Y_{ij})=1445.9$ as diagonal values and $cov(Y_{ij},Y_{ik})=598.2$ as off-diagonal values.
 
+$var(Y_{i})=\begin{bmatrix} 
+    1445.9 &  598.2 & \dots & 598.2 \\
+    598.2  & 1445.9 &               \\
+    \vdots &        &\ddots & \vdots\\
+    598.2  &        & \dots & 1445.9 
+ \end{bmatrix}_{14 \times 14}$
+
 ```{r}
 # covariance matrix for the REML estimates of fixed effects
 vcov(lmm)
@@ -63,7 +70,7 @@ random.effects(lmm)
 The BLUPs for subject-specific intercepts are shown above. 
 
 ```{r}
-resid_lmm = polite_df$frequency-fitted(lmm)[[1]]
+resid_lmm = polite_df$frequency - fitted(lmm)[[1]]
 resid_lmm
 ```
 
@@ -134,6 +141,12 @@ BLUP = fixed_effect + random_effect; BLUP
 ```
 
 #### 5. 
+```{r}
+library(lme4)
+lmm3 = lmer(frequency ~ gender + attitude + (1 | subject) +  (1 | scenario), data = polite_df)
+summary(lmm3)
+```
+
 
 
 
