@@ -93,7 +93,7 @@ We use maximum likelihood method to fit the model. The p-value for Likelihood ra
 
 #### 4. Mixed Effects Model with Random Intercept and Slope
 
-Model: $Y_{ij}=\beta_1 + \beta_2*I(gender=Female)+\beta_3*t_{ij}+b_{1i}+b_{2i}*t_{ij}+ \epsilon_{ij}$, where $t_{ij}=I(attitude_{ij}=pol)$, $\beta_1$ is the fixed intercept, $\beta_2$ and $\beta_3$ are slopes, and $b_{1i}$ and $b_{2i}$ are random intercept and random slope, respectively.
+Model: $Y_{ij}=\beta_1 + \beta_2*I(gender=Male)+\beta_3*t_{ij}+b_{1i}+b_{2i}*t_{ij}+ \epsilon_{ij}$, where $t_{ij}=I(attitude_{ij}=pol)$, $\beta_1$ is the fixed intercept, $\beta_2$ and $\beta_3$ are slopes, and $b_{1i}$ and $b_{2i}$ are random intercept and random slope, respectively.
 
 ```{r}
 lmm2 = lme(frequency ~ gender + attitude, random = ~1 + attitude | subject, method = "REML", data = polite_df)
