@@ -2,7 +2,7 @@
 title: "p8131_hw7_xy2395"
 author: "Jack Yan"
 date: "4/11/2019"
-output: html_document
+output: pdf_document
 ---
 
 ```{r setup, include=FALSE}
@@ -63,14 +63,14 @@ vcov(lmm)
 The covariance matrix for the REML estimates of fixed effects is shown above.
 
 ```{r}
-# BLUPs for subject-speci􏰍c intercepts
+# BLUPs for subject-specific intercepts
 random.effects(lmm)
 ```
 
 The BLUPs for subject-specific intercepts are shown above. 
 
 ```{r}
-resid_lmm = polite_df$frequency - fitted(lmm)[[1]]
+resid_lmm = polite_df$frequency - fitted(lmm)
 resid_lmm
 ```
 

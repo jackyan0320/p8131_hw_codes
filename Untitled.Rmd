@@ -1,0 +1,68 @@
+---
+title: "Untitled"
+author: "Jack Yan"
+date: "4/15/2019"
+output: pdf_document
+---
+
+
+```{r setup, include=FALSE}
+knitr::opts_chunk$set(echo = TRUE)
+library(tidyverse)
+library(nlme)
+# polite_df = read_csv('./hw7/HW7-politeness_data.csv') %>% as.tibble() %>% janitor::clean_names()
+```
+
+```{r, message = FALSE}
+# Import data
+polite_df <- 
+  read_csv('./hw7/HW7-politeness_data.csv') %>%
+  as.tibble() %>% janitor::clean_names() 
+```
+
+#### 1. Exploratory Analysis
+
+Provide boxplots to show the relation between gender/attitude and pitch.
+```{r}
+# boxplots 
+polite_df %>%
+  ggplot(aes(x = gender, y = frequency, color = attitude)) +
+    geom_boxplot() +
+    theme_bw()
+```
+
+Males generally tend to have lower pitch than females. Within each gender, informal attitude (inf) tends to have higher pitch than formal attitude (pol).
+
+#### 2. Mixed Effects Model with Random Intercept
+
+Fit a mixed effects model with random intercepts for different subjects (gender and attitude being the fixed effects).
+
+```{r}
+lmm = lme(frequency ~ gender + attitude, random = ~1 | subject, method = "REML", data = polite_df)
+
+VarCorr(lmm)
+# var(Yi) = 598.1953 + 847.7049 = 1445.9
+var = as.numeric(VarCorr(lmm)[[1]]) + as.numeric(VarCorr(lmm)[[2]]); var 
+# cov(Yij,Yik) = 598.2
+cov = as.numeric(VarCorr(lmm)[[1]]); cov 
+```
+
+The covariance matrix for a subject $Y_i$ follows a compound symmetry pattern with $var(Y_{ij})=1445.9$ and $cov(Y_{ij},Y_{ik})=598.2$. There are 14 measurements within each subject, so the covariance matrix is a 14*14 matrix with $var(Y_{ij})=1445.9$ as diagonal values and $cov(Y_{ij},Y_{ik})=598.2$ as off-diagonal values.
+
+$var(Y_{i})=\begin{bmatrix} 
+    1445.9 &  598.2 & \dots & 598.2 \\
+    598.2  & 1445.9 &               \\
+    \vdots &        &\ddots & \vdots\\
+    598.2  &        & \dots & 1445.9 
+ \end{bmatrix}_{14 \times 14}$
+
+```{r}
+# covariance matrix for the REML estimates of fixed effects
+vcov(lmm)
+```
+
+
+```{r}
+# BLUPs for subject-speci􏰍c intercepts
+random.effects(lmm)
+```
