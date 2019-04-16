@@ -2,7 +2,7 @@
 title: "p8131_hw7_xy2395"
 author: "Jack Yan"
 date: "4/11/2019"
-output: github_document
+output: html_document
 ---
 
 ```{r setup, include=FALSE}
@@ -76,6 +76,7 @@ resid_lmm
 
 Residuals are the deviations from subject-specific mean. The residuals are shown above.
 
+
 #### 3. Likelihood Ratio Test for the Interaction Term
 
 Fit a mixed effects model with intercepts for different subjects (gender, attitude and their interaction being the fixed effects).
@@ -92,16 +93,13 @@ We use maximum likelihood method to fit the model. The p-value for Likelihood ra
 
 #### 4. Mixed Effects Model with Random Intercept and Slope
 
-Model: $Y_{ij}=\beta_1 + \beta_2*gender+\beta_3*I(attitude=pol)+b_{1i}+b_{2i}*I(attitude=pol)+ \epsilon_{ij}$,
-
-where $\beta_1$ and $\beta_2$ are fixed intercept and slope, respectively, and $b_{1i}$ and $b_{2i}$ are random intercept and slope, respectively.
+Model: $Y_{ij}=\beta_1 + \beta_2*I(gender=Female)+\beta_3*t_{ij}+b_{1i}+b_{2i}*t_{ij}+ \epsilon_{ij}$, where $t_{ij}=I(attitude_{ij}=pol)$, $\beta_1$ is the fixed intercept, $\beta_2$ and $\beta_3$ are slopes, and $b_{1i}$ and $b_{2i}$ are random intercept and random slope, respectively.
 
 ```{r}
 lmm2 = lme(frequency ~ gender + attitude, random = ~1 + attitude | subject, method = "REML", data = polite_df)
 
 VarCorr(lmm2)
 getVarCov(lmm2)
-
 ```
 We get $g_{11}=598.2$, $g_{22}=1.079496*10^{-5}$, $g_{12}=0$, and $\sigma^2=847.7$. 
 
@@ -124,11 +122,43 @@ $cov(Y_{ij},Y_{ik})=g_{11}+ (t_{ij} + t_{ik})g_{12} +t_{ij}t_{ik}g_{22}$.
 
 4. If $t_{ij}= 1$ and $t_{ik}=1$, $cov(Y_{ij},Y_{ik})=g_{11}+ 2g_{12}+g_{22}=598.2+2*0+1.079496*10^{-5}=598.2$.
 
-Since $g_{22}$ is small and $t_{ij}$ can be either 0 or 1, we ignore the terms $t_{ij}^2 g_{22}$ and $t_{ij}t_{ik}g_{22}$.
-
 So we get $var(Y_{ij})= 1445.9$ and $cov(Y_{ij},Y_{ik})=598.2$ for any different j and k.
+**Matrix Notation:**
 
-The random slope has small variance, thus captures little variation in the data. So this model does not do much better job than a random intercept model. The covariance structure for this model is thus numerically a compound symmetry structure as in Question 2.
+Suppose there are 14 observations within an individual, and for observations 1-7 $t_{ij}=0$, and for observations 8-14 $t_{ij}=1$. The covariance matrix is as follows:
+
+$A=\begin{bmatrix}
+g_{11} + \sigma^2 & g_{11} & \dots & g_{11} \\
+g_{11} & g_{11} + \sigma^2 &  & \vdots \\
+\vdots &  & \ddots & g_{11} \\
+g_{11} & \dots & g_{11} & g_{11} + \sigma^2 
+\end{bmatrix}_{7 \times 7}$,
+
+$B=\begin{bmatrix}
+g_{11} + 2t_{ij}g_{12} + t_{ij}^2 g_{22} + \sigma^2 & g_{11}+ 2g_{12}+g_{22} & \dots & g_{11}+ 2g_{12}+g_{22} \\
+g_{11}+ 2g_{12}+g_{22} & g_{11} + 2t_{ij}g_{12} + t_{ij}^2 g_{22} + \sigma^2 &  & \vdots \\
+\vdots &  & \ddots & g_{11}+ 2g_{12}+g_{22} \\
+g_{11}+ 2g_{12}+g_{22} & \dots & g_{11}+ 2g_{12}+g_{22} & g_{11} + 2t_{ij}g_{12} + t_{ij}^2 g_{22} + \sigma^2 
+\end{bmatrix}_{7 \times 7}$,
+
+$C=\begin{bmatrix}
+g_{11}+g_{12} & g_{11}+g_{12} & \dots & g_{11}+g_{12} \\
+g_{11}+g_{12} & g_{11}+g_{12} &  & \vdots \\
+\vdots &  & \ddots & g_{11}+g_{12} \\
+g_{11}+g_{12} & \dots & g_{11}+g_{12} & g_{11}+g_{12} 
+\end{bmatrix}_{7 \times 7}$
+
+$var(Y_{i})= \begin{bmatrix}
+A & C \\
+C & B 
+\end{bmatrix}_{14 \times 14}=\begin{bmatrix} 
+    1445.9 &  598.2 & \dots & 598.2 \\
+    598.2  & 1445.9 &               \\
+    \vdots &        &\ddots & \vdots\\
+    598.2  &        & \dots & 1445.9 
+ \end{bmatrix}_{14 \times 14}$
+
+The random slope has small variance, so it captures little variation in the data. So this model does not do a much better job than a random intercept model. The covariance structure for this model is thus numerically a compound symmetry structure as in Question 2.
 
 ```{r}
 fixed.effects(lmm2)
@@ -139,13 +169,52 @@ random_effect = -13.575831 + -8.408891 * 10^(-07); random_effect
 
 BLUP = fixed_effect + random_effect; BLUP
 ```
+The fixed effect for intercept is 256.98691, and for attitude being polite is -20.00238; so the fixed effects in total is 236.9845. The random effect for intercept is -13.575831 and for attitude being polite is $-8.408891 \times 10^{-07}$; so the random effects in total is -13.57583. The BLUP is the summation of fixed effects and random effects, 223.4087.
 
-#### 5. 
+#### 5. ?
 ```{r}
 library(lme4)
 lmm3 = lmer(frequency ~ gender + attitude + (1 | subject) +  (1 | scenario), data = polite_df)
 summary(lmm3)
+# Variance of Y_ij
+224.5 + 613.2 + 637.8
+# Covariance of Y_ij and Y_ik with same scenario
+224.5 + 613.2
+# Covariance of Y_ij and Y_ik with different scenarios
+613.2
 ```
+
+Denote variance of subject specific intercept as $\sigma_1^2$, variance of scenario specific intercept as $\sigma_2^2$, and variance of residuals as $\sigma^2$. We have $\sigma_1^2=613.2$, $\sigma_2^2=224.5$, and $\sigma^2=637.8$.
+
+$A=
+\begin{bmatrix}
+\sigma_1^2+\sigma_2^2+\sigma^2 & \sigma_1^2+\sigma_2^2 \\
+\sigma_1^2+\sigma_2^2 & \sigma_1^2+\sigma_2^2+\sigma^2 
+\end{bmatrix}=
+\begin{bmatrix}
+1475.5 & 837.7 \\
+837.7 & 1475.5 
+\end{bmatrix}$ is the variance-covariance matrix of 2 observations with the same scenario within an individual. 
+
+$B=\begin{bmatrix}
+\sigma_1^2 & \sigma_1^2 \\
+\sigma_1^2 & \sigma_1^2 
+\end{bmatrix}=
+\begin{bmatrix}
+613.2 & 613.2 \\
+613.2 & 613.2 
+\end{bmatrix}$ is the covariance matrix of observations with different scenarios within an individual.
+
+We get $var(Y_i)=\begin{bmatrix}
+A & B & \dots & B \\
+B & A &  & \vdots \\
+\vdots &  & \ddots & B \\
+B & \dots & B & A
+\end{bmatrix}_{14 \times 14}$.
+
+Interpretation:
+
+The mean pitch will on avarage be 20.002 units lower for polite attitude than informal attitude over all observations, within the same gender.
 
 
 
