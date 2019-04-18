@@ -1,0 +1,16 @@
+---
+title: "p8131_hw8_xy2395"
+author: "Jack Yan"
+date: "4/18/2019"
+output: github_document
+---
+
+```{r setup, include=FALSE}
+knitr::opts_chunk$set(echo = TRUE)
+library(tidyverse)
+
+# polite_df = read_csv('./hw7/HW7-politeness_data.csv') %>% as.tibble() %>% janitor::clean_names()
+```
+
+
+
