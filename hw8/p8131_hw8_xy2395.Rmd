@@ -5,12 +5,79 @@ date: "4/18/2019"
 output: github_document
 ---
 
-```{r setup, include=FALSE}
-knitr::opts_chunk$set(echo = TRUE)
+```{r setup, include=TRUE, message=F}
 library(tidyverse)
+library(readxl)
+library(gee)
+library(lme4)
+health_df = read_xlsx('../hw8/HW8-HEALTH.xlsx')
+```
 
-# polite_df = read_csv('./hw7/HW7-politeness_data.csv') %>% as.tibble() %>% janitor::clean_names()
+```{r, eval=F, echo=F}
+health_df = read_xlsx('./hw8/HW8-HEALTH.xlsx')
+```
+
+```{r}
+# Data manipulation
+health_df <-
+  health_df %>% 
+  janitor::clean_names()
+  
+```
+
+### (a)
+```{r}
+# Use baseline data only
+health_baseline <-
+  health_df %>%
+  filter(time == 1)
+
+# 2-way table
+table(health_baseline$txt, health_baseline$health) %>% 
+  addmargins()  %>% 
+  knitr::kable()
+
+# expected values
+table(health_baseline$txt, health_baseline$health) %>% 
+  chisq.test() %>% .$expected
+
+# chi-squared test for association between assignment and health rating
+table(health_baseline$txt, health_baseline$health) %>% 
+  chisq.test()
+```
+
+We can see from the 2-way table that the number of people randomized to control group who rated their health status as 'Good' is 20, while its expected value is 18.45. The difference between observed and expected values is acceptable. The chi-squared test (p-value = 0.6369 >0.05) also suggests that evidence is not strong enough to conclude association between treatment group and health status at baseline. 
+
+### (b) GEE
+```{r}
+health_new = 
+  health_baseline %>% 
+  rename(baseline = health) %>% 
+  select(id, baseline) %>% 
+  inner_join(., health_df, by = 'id') %>% 
+  filter(time != 1) %>% 
+  mutate(months = 3 * (time - 1),
+         months = if_else(months == 9, 12, months),
+         health = if_else(health == 'Good', 1, 0),
+         baseline = fct_relevel(baseline, 'Poor'))
+
+fit_gee = 
+  gee(health ~ baseline + txt + months + agegroup,
+      id = id, scale.fix = TRUE, scale.value = 1,
+      family = binomial,
+      corstr = 'unstructured',
+      data = health_new)
+
+summary(fit_gee)
 ```
 
 
+### (c) GLMM
+```{r}
+fit_glmm = 
+  glmer(health ~ baseline + txt + months + agegroup + (1 | id),
+        data = health_new,
+        family = binomial)
+summary(fit_glmm)
+```
 
