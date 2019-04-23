@@ -2,7 +2,7 @@
 title: "p8131_hw8_xy2395"
 author: "Jack Yan"
 date: "4/18/2019"
-output: github_document
+output: pdf_document
 ---
 
 ```{r setup, include=TRUE, message=F}
@@ -30,10 +30,31 @@ health_df <-
 health_baseline <-
   health_df %>%
   filter(time == 1) 
+```
+
+```{r}
+# 2-way table
+table(health_baseline$txt, health_baseline$health) %>% 
+  addmargins()  %>% 
+  knitr::kable()
+
+# expected values
+table(health_baseline$txt, health_baseline$health) %>% 
+  chisq.test() %>% .$expected  %>% 
+  knitr::kable()
+
+# chi-squared test for association between assignment and health rating
+table(health_baseline$txt, health_baseline$health) %>% 
+  chisq.test()
+```
+We can see from the 2-way table that the number of people randomized to control group who rated their health status as 'Good' is 20, while its expected value is 18.45. The difference between observed and expected values is acceptable. The chi-squared test (p-value = 0.6369 >0.05) also suggests that evidence is not strong enough to conclude association between treatment group and health status at baseline. 
  
+Also use logistic regression to evaluate the relationship between treatment group and health self-rating at baseline, adjusting for age group.
+```{r}
 health_baseline1 <-
    health_baseline %>% 
-   mutate(health = if_else(health == 'Good', 1, 0))
+   mutate(health = if_else(health == 'Good', 1, 0),
+          health = as.factor(health))
 # Logistic regression
 fit_glm = glm(health ~ txt + agegroup, 
               data = health_baseline1,
@@ -43,24 +64,7 @@ exp(-0.3234)
 c(-0.3234-1.96*0.4554, -0.3234+1.96*0.4554) %>% exp()
 ```
 
-We use logistic regression to evaluate the relationship between treatment group and health self-rating at baseline, adjusting for age group. The estiamted odds ratio of Good health for Intervention group vs Control group is 0.724. However, the p-value for the coefficient is 0.478 >0.05, and the 95% confidence interval for the odds ratio is (0.296, 1.767), so we conclude that there is not enough evidence to support association between treatment group assignment and health status at baseline.
-
-```{r, include=F, eval=F}
-# 2-way table
-table(health_baseline$txt, health_baseline$health) %>% 
-  addmargins()  %>% 
-  knitr::kable()
-
-# expected values
-table(health_baseline$txt, health_baseline$health) %>% 
-  chisq.test() %>% .$expected
-
-# chi-squared test for association between assignment and health rating
-table(health_baseline$txt, health_baseline$health) %>% 
-  chisq.test()
-
-# We can see from the 2-way table that the number of people randomized to control group who rated their health status as 'Good' is 20, while its expected value is 18.45. The difference between observed and expected values is acceptable. The chi-squared test (p-value = 0.6369 >0.05) also suggests that evidence is not strong enough to conclude association between treatment group and health status at baseline. 
-```
+The estiamted odds ratio of Good health for Intervention group vs Control group is 0.724. However, the p-value for the coefficient is 0.478 >0.05, and the 95% confidence interval for the odds ratio is (0.296, 1.767), so we conclude that there is not enough evidence to support association between treatment group assignment and health status at baseline.
 
 ### (b) GEE
 ```{r}
@@ -70,6 +74,7 @@ health_new =
   select(id, baseline) %>% 
   inner_join(., health_df, by = 'id') %>% 
   filter(time != 1) %>% 
+  # recode `months` such that it reflects the number of months post randomization
   mutate(months = 3 * (time - 1),
          months = if_else(months == 9, 12, months),
          health = if_else(health == 'Good', 1, 0),
@@ -125,3 +130,4 @@ tibble(
 ```
 
 Different from GEE model, here for GLMM we can only interpret the `months` term, because other terms cannot be changed within the same subject during the course of the study. The interpretation of the coefficient for `months` is: the log odds ratio of 'Good' rating for one additional month post randomization is 0.0372, within the same subject.
+
