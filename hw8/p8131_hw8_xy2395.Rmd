@@ -129,5 +129,5 @@ tibble(
 
 ```
 
-Different from GEE model, here for GLMM we can only interpret the `months` term, because other terms cannot be changed within the same subject during the course of the study. The interpretation of the coefficient for `months` is: the log odds ratio of 'Good' rating for one additional month post randomization is 0.0372, within the same subject.
+Different from GEE model, here for GLMM we can only interpret the `months` term, because other terms cannot be changed within the same subject during the course of the study. The interpretation of the coefficient for `months` is: the log odds ratio of 'Good' rating for one additional month post randomization is 0.0372, within the same subject. The 95% confidence interval is (-0.0987, 0.173), and p-value is 0.592 >0.05, so the `months` term is not significant in this model.
 
