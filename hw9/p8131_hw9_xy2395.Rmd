@@ -5,13 +5,47 @@ date: "4/23/2019"
 output: pdf_document
 ---
 
+
+### Problem 1
+
+We have $$h(t)=\frac{2t}{1+t^2}=\frac{d}{dt}\lbrack log(1+t^2) \rbrack=\frac{d}{dt} \lbrack -logS(t) \rbrack$$
+$$log(1+t^2) = -logS(t)$$
+Therefore, the survival function is $$S(t) = \frac{1}{1+t^2}$$
+The cumulative density function is $$F(t) = 1 - S(t) = 1 - \frac{1}{1+t^2}$$
+The probability density function is $$f(t) = \frac{d}{dt}F(t) = \frac{2t}{(1+t^2)^2}$$
+
+### Problem 2
+```{r, include = F}
+library(tidyverse)
+tibble(
+  t_i = c(1,2,4,5,6,7,8,9,10),
+  n_i = c(10,9,7,6,5,4,3,2,1),
+  d_i  = c(1,2,0,0,1,0,0,0,0),
+  c_i = c(0,0,1,1,0,1,1,1,1)
+) %>%
+knitr::kable()
+```
+
+|$t_i$|$n_i$|$d_i$|$c_i$|$\hat{\lambda_i}$|                                $\hat{S}(t)$|                           $\tilde{H}(t)$| $exp(-\tilde{H}(t))$|
+|----:|----:|----:|----:|----------------:|-------------------------------------------:|----------------------------------------:|--------------------:|
+|    1|   10|    1|    0|   $\frac{1}{10}$|           $1*(1-\frac{1}{10})=\frac{9}{10}$|                           $\frac{1}{10}$|0.905|
+|    2|    9|    2|    0|    $\frac{2}{9}$| $\frac{9}{10}*(1-\frac{2}{9})=\frac{7}{10}$| $\frac{1}{10}+\frac{2}{9}=\frac{29}{90}$|0.725|
+|    4|    7|    0|    1|                0|                              $\frac{7}{10}$|                          $\frac{29}{90}$|0.725|
+|    5|    6|    0|    1|                0|                              $\frac{7}{10}$|                          $\frac{29}{90}$|0.725|
+|    6|    5|    1|    0|    $\frac{1}{5}$|$\frac{7}{10}*(1-\frac{1}{5})=\frac{14}{25}$|$\frac{29}{90}+\frac{1}{5}=\frac{47}{90}$|0.593|
+|    7|    4|    0|    1|                0|                             $\frac{14}{25}$|                          $\frac{47}{90}$|0.593|
+|    8|    3|    0|    1|                0|                             $\frac{14}{25}$|                          $\frac{47}{90}$|0.593|
+|    9|    2|    0|    1|                0|                             $\frac{14}{25}$|                          $\frac{47}{90}$|0.593|
+|   10|    1|    0|    1|                0|                             $\frac{14}{25}$|                          $\frac{47}{90}$|0.593|
+
+
+### Problem 3
 ```{r setup, include=TRUE, message=F, warning=F}
 library(tidyverse)
 library(KMsurv) # data source
 library(survival) # problem 3
 ```
 
-### Problem 3
 ```{r}
 data(tongue)
 tongue_df = 
