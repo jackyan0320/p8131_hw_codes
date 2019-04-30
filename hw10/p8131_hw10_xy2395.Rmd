@@ -1,0 +1,9 @@
+---
+title: "p8131_hw10_xy2395"
+author: "Jack Yan"
+date: "4/30/2019"
+output: pdf_document
+---
+
+
+### Problem 1
