@@ -54,8 +54,19 @@ data3 =
          z2 = if_else(stage == 3, 1, 0),
          z3 = if_else(stage == 4, 1, 0)) %>% 
   rename(z4 = age)
-fit = coxph(Surv(time, delta)~z1 + z2 + z3 + z4 + z1 * z4, data = data3)
+fit = coxph(Surv(time, delta)~z1 + z2 + z3 + z4 + z1 * z4, data = data3, ties = "breslow")
 summary(fit)
 ```
+The proportional hazards model is:
+$$h_i(t)=h_0(t) e^{-7.38Z_1+0.62Z_2+1.75Z_3+0.006Z_4+0.11Z_1 \times Z_4 }$$
+Interpretations:
 
-**Explain results here**. The relative risk of dying is 0.0005587 for a stage II patient of age 50 as compared to a stage I patient of the same age.
+The hazard ratio for subjects of age k in Stage II versus subjects in Stage I of the same age is $e^{-7.38+0.11 \times k}$.
+
+The hazard ratio for subjects in Stage III versus subjects in Stage I is 1.86, keeping age at diagnosis constant.
+
+The hazard ratio for subjects in Stage IV versus subjects in Stage I is 5.77, keeping age at diagnosis constant.
+
+If the patients are not in stage II, the hazard ratio for one-year increase in age at diagnosis is 1.0059908, for patients in the same stage. If the patients are in stage II, the hazard ratio for one-year increase in age at diagnosis is $e^{0.006+0.112}=1.12$.
+
+The relative risk of dying is $e^{-7.38+0.11 \times 50}=0.153$ for a stage II patient of age 50 as compared to a stage I patient of the same age.
