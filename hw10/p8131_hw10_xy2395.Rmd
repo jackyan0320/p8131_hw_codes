@@ -4,6 +4,58 @@ author: "Jack Yan"
 date: "4/30/2019"
 output: pdf_document
 ---
+```{r, message=F}
+library(tidyverse)
+library(survival)
+library(survminer)
+library(KMsurv)
+```
 
 
 ### Problem 1
+```{r}
+data1 = 
+  tibble(
+    time = c(4, 12, 15, 21, 23, 2, 6, 8, 10, 19),
+    delta = c(1, 0, 1, 0, 1, 1, 0, 0, 1, 1),
+    group = c(1, 1, 1, 1, 1, 2, 2, 2, 2, 2)
+  )
+Surv(data1$time, data1$delta, type = 'right')
+# Plot
+ggsurvplot(survfit(Surv(time, delta) ~ group, data = data1), conf.int=TRUE)
+# Log-rank test
+survdiff(Surv(time, delta)~group, data = data1)
+```
+
+The chi-squared statistic is 1.1 and p-value is 0.3 >0.05, so we fail to reject the null and conclude that the survival curves of the 2 groups are not different.
+
+### Problem 2
+```{r}
+data(kidtran)
+head(kidtran)
+# plot
+ggsurvplot(survfit(Surv(time, delta) ~ gender + race, data = kidtran), conf.int=F)
+# Log-rank test
+# male
+survdiff(Surv(time, delta)~ gender + race, data = kidtran, subset = (gender == 1))
+# female
+survdiff(Surv(time, delta)~ gender + race, data = kidtran, subset = (gender == 2))
+```
+For males, the chi-squared statistic is 0.1 and p-value is 0.8 >0.05, so we fail to reject the null and conclude that the survival curve of different races is not different in males. On the other hand, for females, the chi-squared statistics is 4.8 and p-value is 0.03 <0.05, so we have enough evidence to reject the null and conclude that the survival curves for different races is different in females.
+
+
+### Problem 3
+```{r}
+data(larynx)
+head(larynx)
+data3 = 
+  larynx %>% 
+  mutate(z1 = if_else(stage == 2, 1, 0),
+         z2 = if_else(stage == 3, 1, 0),
+         z3 = if_else(stage == 4, 1, 0)) %>% 
+  rename(z4 = age)
+fit = coxph(Surv(time, delta)~z1 + z2 + z3 + z4 + z1 * z4, data = data3)
+summary(fit)
+```
+
+**Explain results here**. The relative risk of dying is 0.0005587 for a stage II patient of age 50 as compared to a stage I patient of the same age.
